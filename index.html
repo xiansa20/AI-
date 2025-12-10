@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>火光图片压缩</title>
+    <style>
+        /* --- 极简主义变量定义 --- */
+        :root {
+            --bg: #ffffff;
+            --sidebar-bg: #fbfbfb; 
+            --text-main: #111111;
+            --text-sub: #888888;
+            --primary: #111111;
+            --primary-fg: #ffffff;
+            --border: #eeeeee;
+            --card-bg: #ffffff;
+            --card-shadow: 0 4px 20px rgba(0,0,0,0.04);
+            --radius: 16px;
+            --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        /* --- 夜间模式变量 --- */
+        body.dark-mode {
+            --bg: #111111;
+            --sidebar-bg: #161616;
+            --text-main: #ffffff;
+            --text-sub: #888888;
+            --primary: #ffffff;
+            --primary-fg: #000000;
+            --border: #333333;
+            --card-bg: #1e1e1e;
+            --card-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+
+        * { box-sizing: border-box; user-select: none; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+            background: var(--bg);
+            color: var(--text-main);
+            margin: 0; padding: 0; display: flex; height: 100vh; overflow: hidden;
+            transition: background 0.3s, color 0.3s;
+        }
+
+        .title-bar { position: fixed; top: 0; left: 0; width: 100%; height: 40px; -webkit-app-region: drag; z-index: 999; }
+        .layout { display: flex; width: 100%; height: 100%; padding-top: 30px; }
+
+        /* 左侧侧边栏 */
+        .sidebar {
+            width: 280px; background: var(--sidebar-bg); border-right: 1px solid var(--border);
+            padding: 30px 24px; display: flex; flex-direction: column; gap: 24px; transition: var(--transition);
+        }
+
+        .brand {
+            font-size: 1.1rem; font-weight: 800; letter-spacing: -0.5px;
+            margin-bottom: 0px; display: flex; justify-content: space-between; align-items: center;
+        }
+
+        /* 右侧内容舞台 */
+        .content {
+            flex: 1; padding: 40px; overflow-y: auto; position: relative;
+            background: var(--bg); transition: background 0.3s;
+        }
+
+        /* 空状态 */
+        .empty-state {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            text-align: center; opacity: 1; transition: var(--transition); pointer-events: none;
+        }
+        .content.has-files .empty-state { opacity: 0; transform: translate(-50%, -40%) scale(0.9); }
+        .art-icon { font-size: 80px; margin-bottom: 20px; opacity: 0.1; filter: grayscale(100%); transition: var(--transition); }
+        .empty-text-main { font-size: 1.5rem; font-weight: 600; margin-bottom: 10px; letter-spacing: -1px; }
+        .empty-text-sub { color: var(--text-sub); font-size: 0.9rem; }
+
+        /* 控件样式 */
+        .control-group label {
+            display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: 600;
+            color: var(--text-sub); margin-bottom: 8px;
+        }
+
+        input[type="range"] {
+            width: 100%; height: 4px; background: var(--border); border-radius: 2px; appearance: none; outline: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            appearance: none; width: 16px; height: 16px; background: var(--primary);
+            border-radius: 50%; cursor: pointer; border: 2px solid var(--bg);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1); transition: transform 0.1s;
+        }
+        input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+
+        select, .input-text {
+            width: 100%; padding: 10px 12px; border-radius: 12px;
+            border: 1px solid var(--border); background: var(--bg);
+            color: var(--text-main); font-size: 0.9rem; outline: none; 
+            transition: var(--transition);
+        }
+        .input-text:focus { border-color: var(--text-sub); }
+
+        /* 模式切换胶囊 */
+        .mode-capsule { display: flex; background: var(--border); border-radius: 100px; padding: 3px; margin-top: 5px; }
+        .radio-label {
+            flex: 1; text-align: center; padding: 6px; font-size: 0.8rem;
+            cursor: pointer; border-radius: 100px; color: var(--text-sub); transition: var(--transition);
+        }
+        input[type="radio"] { display: none; }
+        input[type="radio"]:checked + span {
+            background: var(--bg); color: var(--text-main); box-shadow: 0 2px 8px rgba(0,0,0,0.05); font-weight: 600;
+        }
+
+        /* 按钮 */
+        .btn {
+            border: none; padding: 14px; border-radius: 12px; font-weight: 600; cursor: pointer;
+            font-size: 0.9rem; display: flex; align-items: center; justify-content: center; gap: 8px;
+            width: 100%; transition: var(--transition);
+        }
+        .btn-primary { background: var(--primary); color: var(--primary-fg); }
+        .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+        .btn-primary:disabled { opacity: 0.3; cursor: not-allowed; transform: none; }
+        .btn-secondary { background: transparent; color: var(--text-sub); margin-top: 10px; }
+        .btn-secondary:hover { color: #ef4444; background: rgba(239,68,68,0.05); }
+
+        /* 主题切换开关 (SVG) - 问题1修复：图标调大 */
+        .theme-toggle {
+            background: none; border: none; cursor: pointer; color: var(--text-main);
+            opacity: 0.6; transition: 0.2s; padding: 5px; display: flex; align-items: center; justify-content: center;
+        }
+        .theme-toggle:hover { opacity: 1; transform: rotate(15deg); }
+        /* 统一设置宽高，确保视觉平衡 */
+        .theme-toggle svg { width: 22px; height: 22px; fill: currentColor; }
+        
+        /* 根据模式显示不同的图标 */
+        .icon-sun { display: none; }
+        .icon-moon { display: block; }
+        body.dark-mode .icon-sun { display: block; }
+        body.dark-mode .icon-moon { display: none; }
+
+        /* 网格与卡片 */
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 24px; opacity: 0; transition: opacity 0.5s; }
+        .content.has-files .grid { opacity: 1; }
+
+        .card {
+            background: var(--card-bg); border-radius: var(--radius); padding: 12px;
+            box-shadow: var(--card-shadow); transition: var(--transition);
+            position: relative; cursor: pointer; border: 1px solid transparent;
+        }
+        .card:hover { transform: translateY(-4px); }
+        .card.selected { border-color: var(--primary); }
+        
+        .card-img-box {
+            height: 140px; border-radius: 10px; overflow: hidden;
+            background: var(--sidebar-bg); margin-bottom: 12px;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .card img { width: 100%; height: 100%; object-fit: cover; }
+        
+        /* 卡片底部信息布局重构 - 问题2 */
+        .card-info {
+            display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;
+        }
+        .info-left { flex: 1; overflow: hidden; }
+        .info-right { text-align: right; flex-shrink: 0; display: flex; flex-direction: column; align-items: flex-end; }
+
+        .filename { 
+            font-weight: 600; font-size: 0.85rem; margin-bottom: 2px; 
+            overflow: hidden; white-space: nowrap; text-overflow: ellipsis; 
+            color: var(--text-main);
+        }
+        .meta-original { font-size: 0.75rem; color: var(--text-sub); }
+        
+        /* 右侧强调信息 */
+        .meta-highlight-res { font-size: 0.75rem; font-weight: 600; color: var(--text-main); margin-bottom: 0px; }
+        .meta-highlight-size { font-size: 0.85rem; font-weight: 700; color: var(--text-main); }
+        
+        /* 勾选框 - 问题3修复：改为灰底黑勾 */
+        .check-circle {
+            position: absolute; top: 18px; right: 18px; width: 22px; height: 22px;
+            border-radius: 50%; 
+            background: rgba(255,255,255,0.9); /* 始终保持浅色背景 */
+            backdrop-filter: blur(4px);
+            display: flex; align-items: center; justify-content: center; opacity: 0;
+            transition: 0.2s; box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+            color: #000000 !important; /* 强制黑色勾选 */
+            font-weight: 900;
+        }
+        .card.selected .check-circle { opacity: 1; transform: scale(1.1); }
+        .card.selected .check-circle::after { content: '✓'; }
+
+        .toolbar {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 30px; opacity: 0; pointer-events: none; transition: 0.3s;
+        }
+        .content.has-files .toolbar { opacity: 1; pointer-events: auto; }
+        .btn-text { background: none; border: none; color: var(--primary); font-weight: 600; font-size: 0.85rem; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <div class="title-bar"></div>
+
+    <div class="layout">
+        <div class="sidebar">
+            <div class="brand">
+                <span>火光图片压缩</span>
+                <button class="theme-toggle" onclick="toggleTheme()" title="切换日/夜模式">
+                    <!-- 调整了svg viewBox和样式，确保视觉大小一致 -->
+                    <svg class="icon-moon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+                    <svg class="icon-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+                </button>
+            </div>
+
+            <div class="control-group">
+                <label>输出格式</label>
+                <select id="formatSelect">
+                    <option value="original">保持原格式</option>
+                    <option value="image/jpeg">JPG</option>
+                    <option value="image/png">PNG</option>
+                    <option value="image/webp">WebP</option>
+                </select>
+            </div>
+
+            <!-- 问题6修复：增加前缀后缀输入 -->
+            <div class="control-group">
+                <label>文件名设置</label>
+                <div style="display: flex; gap: 8px;">
+                    <input type="text" id="prefixStr" placeholder="前缀" class="input-text">
+                    <input type="text" id="suffixStr" placeholder="后缀" class="input-text">
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label>质量 <span id="qVal">80%</span></label>
+                <input type="range" id="quality" min="1" max="100" value="80">
+            </div>
+
+            <div class="control-group">
+                <label>缩放 <span id="sVal">100%</span></label>
+                <input type="range" id="scale" min="10" max="100" value="100">
+            </div>
+
+            <div class="control-group">
+                <label>保存模式</label>
+                <div class="mode-capsule">
+                    <label class="radio-label">
+                        <input type="radio" name="saveMode" value="new" checked>
+                        <span>另存为...</span>
+                    </label>
+                    <label class="radio-label">
+                        <input type="radio" name="saveMode" value="overwrite">
+                        <span>覆盖原图</span>
+                    </label>
+                </div>
+            </div>
+
+            <div style="margin-top: auto;">
+                <button class="btn btn-primary" id="saveBtn" onclick="saveAll()" disabled>
+                    保存图片
+                </button>
+                <button class="btn btn-secondary" onclick="clearAll()">
+                    清空列表
+                </button>
+            </div>
+        </div>
+
+        <div class="content" id="contentArea">
+            <div class="empty-state">
+                <div class="art-icon">✦</div>
+                <div class="empty-text-main">拖入图片</div>
+                <div class="empty-text-sub">支持 JPG / PNG / WebP 批量处理</div>
+            </div>
+
+            <div class="toolbar">
+                <span id="stats-text" style="color: var(--text-sub); font-size: 0.9rem;">0 张图片</span>
+                <button class="btn-text" onclick="toggleSelectAll()">全选 / 反选</button>
+            </div>
+
+            <div class="grid" id="grid"></div>
+        </div>
+    </div>
+
+    <script>
+        let fileQueue = [];
+        const contentArea = document.getElementById('contentArea');
+        const grid = document.getElementById('grid');
+        const saveBtn = document.getElementById('saveBtn');
+        const statsText = document.getElementById('stats-text');
+
+        function toggleTheme() {
+            document.body.classList.toggle('dark-mode');
+            const isDark = document.body.classList.contains('dark-mode');
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+        }
+        if (localStorage.getItem('theme') === 'dark') document.body.classList.add('dark-mode');
+
+        // 拖拽逻辑
+        document.addEventListener('dragenter', (e) => { e.preventDefault(); }, false);
+        document.addEventListener('dragover', (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; }, false);
+        document.addEventListener('dragleave', (e) => { e.preventDefault(); }, false);
+        document.addEventListener('drop', (e) => { e.preventDefault(); if(e.dataTransfer.files.length) handleFiles(e.dataTransfer.files); }, false);
+
+        function handleFiles(files) {
+            Array.from(files).forEach(file => {
+                if (!file.type.startsWith('image/')) return;
+                const realPath = window.electronAPI.getFilePath(file);
+                if (fileQueue.some(item => item.path === realPath)) return;
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.src = e.target.result;
+                    img.onload = () => {
+                        const item = {
+                            id: Date.now() + Math.random().toString(36),
+                            file: file, path: realPath, src: e.target.result,
+                            originalSize: file.size, originalW: img.width, originalH: img.height,
+                            processedBlob: null, selected: true
+                        };
+                        fileQueue.push(item);
+                        renderCard(item);
+                        processImage(item);
+                        updateUIState();
+                    }
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function updateUIState() {
+            if (fileQueue.length > 0) contentArea.classList.add('has-files');
+            else contentArea.classList.remove('has-files');
+            
+            const selectedCount = fileQueue.filter(i => i.selected).length;
+            statsText.innerText = `已选 ${selectedCount} / ${fileQueue.length}`;
+            saveBtn.innerText = selectedCount > 0 ? `保存 (${selectedCount})` : '保存图片';
+            saveBtn.disabled = selectedCount === 0;
+        }
+
+        function renderCard(item) {
+            const div = document.createElement('div');
+            div.className = 'card selected'; 
+            div.id = `card-${item.id}`;
+            div.onclick = () => toggleItemSelection(item.id);
+
+            // 问题2修复：调整信息布局，左侧为原始信息，右侧为处理后信息（分辨率在上方）
+            div.innerHTML = `
+                <div class="check-circle"></div>
+                <div class="card-img-box"><img src="${item.src}"></div>
+                <div class="card-info">
+                    <div class="info-left">
+                        <div class="filename" title="${item.file.name}">${item.file.name}</div>
+                        <div class="meta-original">${item.originalW}×${item.originalH}</div>
+                        <div class="meta-original">${formatSize(item.originalSize)}</div>
+                    </div>
+                    <div class="info-right">
+                        <div class="meta-highlight-res" id="res-${item.id}">...</div>
+                        <div class="meta-highlight-size" id="size-${item.id}">...</div>
+                    </div>
+                </div>
+            `;
+            grid.appendChild(div);
+        }
+
+        const refreshAll = debounce(() => fileQueue.forEach(processImage), 300);
+        document.getElementById('quality').oninput = (e) => { document.getElementById('qVal').innerText = e.target.value + '%'; refreshAll(); };
+        document.getElementById('scale').oninput = (e) => { document.getElementById('sVal').innerText = e.target.value + '%'; refreshAll(); };
+        document.getElementById('formatSelect').onchange = () => refreshAll();
+
+        function processImage(item) {
+            const img = new Image();
+            img.src = item.src;
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const scale = document.getElementById('scale').value / 100;
+                const newW = Math.round(img.width * scale);
+                const newH = Math.round(img.height * scale);
+                canvas.width = newW; canvas.height = newH;
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, newW, newH);
+                ctx.drawImage(img, 0, 0, newW, newH);
+
+                const q = document.getElementById('quality').value / 100;
+                let type = document.getElementById('formatSelect').value;
+                if (type === 'original') {
+                     if (item.file.name.toLowerCase().endsWith('.png')) type = 'image/png';
+                     else if (item.file.name.toLowerCase().endsWith('.webp')) type = 'image/webp';
+                     else type = 'image/jpeg';
+                }
+
+                canvas.toBlob((blob) => {
+                    item.processedBlob = blob;
+                    item.targetType = type;
+                    const sizeEl = document.getElementById(`size-${item.id}`);
+                    if(sizeEl) sizeEl.innerText = formatSize(blob.size);
+                    
+                    // 问题2修复：右侧仅显示处理后的分辨率，且与下方大小对齐
+                    const resEl = document.getElementById(`res-${item.id}`);
+                    if(resEl) resEl.innerText = `${newW}×${newH}`;
+                    
+                }, type, q);
+            };
+        }
+
+        async function saveAll() {
+            const selected = fileQueue.filter(i => i.selected && i.processedBlob);
+            if (!selected.length) return;
+            const mode = document.querySelector('input[name="saveMode"]:checked').value;
+            
+            // 获取前缀后缀 - 问题6
+            const prefix = document.getElementById('prefixStr').value || '';
+            const suffix = document.getElementById('suffixStr').value || '';
+
+            if (mode === 'overwrite' && !await window.electronAPI.confirmOverwrite()) return;
+            let target = null;
+            if (mode === 'new') {
+                target = await window.electronAPI.selectFolder();
+                if (!target) return;
+            }
+
+            saveBtn.innerText = '处理中...';
+            saveBtn.disabled = true;
+
+            for (const item of selected) {
+                const reader = new FileReader();
+                reader.readAsDataURL(item.processedBlob);
+                await new Promise(resolve => {
+                    reader.onloadend = async () => {
+                        let ext = 'jpg';
+                        if (item.targetType.includes('png')) ext = 'png';
+                        if (item.targetType.includes('webp')) ext = 'webp';
+                        
+                        let baseName = item.file.name.substring(0, item.file.name.lastIndexOf('.')) || item.file.name;
+                        // 问题6：拼接前后缀
+                        const finalName = `${prefix}${baseName}${suffix}.${ext}`;
+                        
+                        await window.electronAPI.saveImage({
+                            bufferData: reader.result, 
+                            newFileName: finalName,
+                            originalPath: item.path, targetFolder: target, mode: mode
+                        });
+                        resolve();
+                    };
+                });
+            }
+            saveBtn.innerText = '完成';
+            
+            // 问题5修复：删除了 window.electronAPI.openFolder(target) 的调用
+
+            // 问题4修复：保存完成后自动取消勾选已处理的图片
+            selected.forEach(item => {
+                toggleItemSelection(item.id); // 触发反选逻辑
+            });
+
+            setTimeout(() => {
+                updateUIState();
+                saveBtn.innerText = '保存图片'; // 重置按钮文本
+            }, 1000);
+        }
+
+        function toggleItemSelection(id) {
+            const item = fileQueue.find(i => i.id === id);
+            if (item) { 
+                item.selected = !item.selected; 
+                const el = document.getElementById(`card-${item.id}`);
+                item.selected ? el.classList.add('selected') : el.classList.remove('selected');
+                updateUIState();
+            }
+        }
+        function toggleSelectAll() {
+            const allSelected = fileQueue.every(i => i.selected);
+            fileQueue.forEach(item => { 
+                item.selected = !allSelected; 
+                const el = document.getElementById(`card-${item.id}`);
+                item.selected ? el.classList.add('selected') : el.classList.remove('selected');
+            });
+            updateUIState();
+        }
+        function clearAll() { 
+            if(confirm('清空列表?')) { 
+                fileQueue = []; grid.innerHTML = ''; updateUIState(); 
+            } 
+        }
+        
+        function formatSize(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024; const sizes = ['B', 'KB', 'MB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return (bytes / Math.pow(k, i)).toFixed(1) + ' ' + sizes[i];
+        }
+        function debounce(fn, delay) { let timer; return (...args) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), delay); } }
+    </script>
+</body>
+</html>
