@@ -1,20 +1,46 @@
 <div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+  <img src="https://via.placeholder.com/150?text=AppIcon" width="120" height="120" alt="Logo">
+  <h1>AI火光图片压缩 (Fire Image Compressor)</h1>
+  <p><strong>AI 驱动的极简主义 Mac 图片处理工具</strong></p>
+  
+  <a href="#download">
+    <img src="https://img.shields.io/badge/macOS-Download-000000?style=for-the-badge&logo=apple&logoColor=white" alt="Download for Mac">
+  </a>
 </div>
 
-# Run and deploy your AI Studio app
+---
 
-This contains everything you need to run your app locally.
+## ✨ 简介
+**不仅仅是压缩，更是你的智能图片管家。**
+专为摄影师与设计师打造，告别繁琐的手动重命名和盲猜参数，让 AI 帮你处理杂乱的素材。
 
-View your app in AI Studio: https://ai.studio/apps/drive/1NxuXBtLanljiyEkQVfVSQ_8HlrWip-tk
+## 🔥 核心功能
 
-## Run Locally
+### 1. 🤖 AI 智能重命名
+利用先进的视觉大模型（SiliconFlow, ChatGPT, Gemini 等），自动识别图片内容并重命名。
+* **Before:** `DSC_001.JPG`
+* **After:** `[风景]落日下的雪山.jpg`
 
-**Prerequisites:**  Node.js
+### 2. ⚡️ 智能参数 & 实时预览
+* **所见即所得**：双击大图预览，支持鼠标滚轮定点缩放。
+* **智能参数**：一键应用最佳压缩参数（质量 70% / 缩放 70%），平衡体积与画质。
 
+### 3. 📸 专业级 RAW 格式支持
+* 原生支持 **Nikon (.NEF), Canon (.CR2), Sony (.ARW)** 等格式。
+* 调用 Mac 系统级引擎进行全尺寸无损解码，保留 6000x4000 超清分辨率，绝无缩略图画质妥协。
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+### 4. 🚀 批量处理
+* 多线程并发处理，支持批量转换格式（JPG/PNG/WebP）。
+* 支持拖拽框选、批量删除，操作行云流水。
+
+---
+
+## 📥 下载安装
+
+1.  点击右侧的 **"Releases"** (或者点击下方链接)。
+2.  下载最新的 `.dmg` 安装包。
+3.  将图标拖入 "应用程序" (Applications) 文件夹。
+
+> **⚠️ 注意：** > 首次打开若提示“无法验证开发者”，请**右键点击图标 -> 选择打开 -> 点击确定**即可。
+
+[👉 点击前往下载页面](../../releases)
