@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI火光图片压缩 - Next Gen Image Tool</title>
+    <style>
+        /* --- 核心变量：火光主题 --- */
+        :root {
+            --bg: #050505;
+            --surface: #0f0f0f;
+            --border: rgba(255, 255, 255, 0.08);
+            --primary-gradient: linear-gradient(135deg, #FF4D4D 0%, #F9CB28 100%);
+            --glow-color: rgba(255, 77, 77, 0.5);
+            --text-main: #ffffff;
+            --text-sub: #888888;
+            --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", sans-serif;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-main);
+            font-family: var(--font-sans);
+            line-height: 1.6;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* 背景氛围灯效 */
+        .ambient-light {
+            position: fixed; top: -20%; left: 50%; transform: translateX(-50%);
+            width: 80%; height: 600px;
+            background: radial-gradient(circle, rgba(255, 77, 77, 0.15) 0%, rgba(0,0,0,0) 70%);
+            z-index: -1; pointer-events: none;
+            filter: blur(80px);
+        }
+
+        /* 噪点纹理层 */
+        .noise-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
+            z-index: -1; pointer-events: none; opacity: 0.4;
+        }
+
+        .container { max-width: 1200px; margin: 0 auto; padding: 0 40px; }
+        a { text-decoration: none; color: inherit; transition: 0.3s; }
+
+        /* --- 导航 --- */
+        nav {
+            padding: 30px 0;
+            display: flex; justify-content: space-between; align-items: center;
+            /* 玻璃态 */
+            position: sticky; top: 0; z-index: 100;
+            backdrop-filter: blur(10px);
+            mask-image: linear-gradient(to bottom, black 80%, transparent 100%);
+        }
+        .logo { font-weight: 800; font-size: 1.4rem; letter-spacing: -0.5px; display: flex; align-items: center; gap: 8px; }
+        .logo span { background: var(--primary-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .nav-links a { 
+            color: var(--text-sub); margin-left: 30px; font-size: 0.9rem; font-weight: 500;
+        }
+        .nav-links a:hover { color: var(--text-main); }
+
+        /* --- Hero 区域 --- */
+        .hero { text-align: center; padding: 120px 0 80px; position: relative; }
+        
+        /* 进场动画 */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .hero h1 {
+            font-size: 5rem; font-weight: 800; letter-spacing: -2px; line-height: 1.1;
+            margin-bottom: 24px;
+            animation: fadeInUp 0.8s ease-out forwards;
+        }
+        .hero h1 .gradient-text {
+            background: var(--primary-gradient);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        
+        .hero p {
+            font-size: 1.4rem; color: var(--text-sub); max-width: 640px; margin: 0 auto 50px;
+            font-weight: 400; letter-spacing: -0.2px;
+            animation: fadeInUp 0.8s ease-out 0.2s forwards; opacity: 0;
+        }
+
+        /* 高级按钮 */
+        .btn-group {
+            display: flex; justify-content: center; gap: 20px;
+            animation: fadeInUp 0.8s ease-out 0.4s forwards; opacity: 0;
+        }
+        .btn {
+            padding: 16px 36px; border-radius: 100px; font-weight: 600; font-size: 1.1rem;
+            display: flex; align-items: center; gap: 10px; cursor: pointer; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+        .btn-primary {
+            background: var(--text-main); color: #000;
+            box-shadow: 0 0 0 rgba(255, 255, 255, 0.5);
+        }
+        .btn-primary:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 30px rgba(255, 255, 255, 0.2);
+        }
+        .btn-glass {
+            background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: var(--text-main);
+        }
+        .btn-glass:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.3); }
+
+        /* --- 这里的对比滑块 CSS (完全保留之前的逻辑，只改外观) --- */
+        .comparison-wrapper {
+            margin-top: 100px;
+            position: relative;
+            width: 100%; max-width: 1100px;
+            margin-left: auto; margin-right: auto;
+            border-radius: 20px; overflow: hidden;
+            border: 1px solid var(--border);
+            /* 底部发光效果 */
+            box-shadow: 0 40px 100px -20px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.05);
+            line-height: 0;
+            animation: fadeInUp 1s ease-out 0.6s forwards; opacity: 0;
+        }
+        .img-base { width: 100%; height: auto; display: block; }
+        .img-overlay {
+            position: absolute; top: 0; left: 0; height: 100%; width: 50%;
+            overflow: hidden; border-right: 2px solid rgba(255,255,255,0.8); background: #000; z-index: 10;
+            box-shadow: 5px 0 20px rgba(0,0,0,0.3);
+        }
+        .img-overlay img { height: 100%; width: auto; max-width: none; display: block; }
+        
+        .slider-handle {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 48px; height: 48px; background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 50%; z-index: 20;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 4px 30px rgba(0,0,0,0.3); cursor: ew-resize;
+        }
+        
+        /* 标签美化 */
+        .label {
+            position: absolute; top: 24px; padding: 8px 16px;
+            background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 100px; font-size: 0.85rem; font-weight: 600;
+            backdrop-filter: blur(12px); pointer-events: none; user-select: none;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .label-before { left: 24px; color: #a1a1aa; z-index: 15; }
+        .label-after { right: 24px; color: #fff; z-index: 5; }
+        .label-dot { width: 6px; height: 6px; border-radius: 50%; }
+        
+        .compare-desc-container { text-align: center; margin-top: 40px; display: flex; justify-content: center; }
+        .compare-desc {
+            display: inline-flex; align-items: center; gap: 10px; padding: 10px 24px;
+            background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border);
+            border-radius: 50px; color: var(--text-sub); font-size: 0.9rem;
+            backdrop-filter: blur(10px); transition: 0.3s;
+        }
+        .compare-desc:hover { background: rgba(255, 255, 255, 0.08); color: #fff; border-color: rgba(255, 255, 255, 0.2); }
+
+        /* --- 特性卡片 (Bento Grid 风格) --- */
+        .section-header { text-align: center; margin: 120px 0 60px; }
+        .section-header h2 { font-size: 2.5rem; font-weight: 700; margin-bottom: 10px; }
+        .section-header p { color: var(--text-sub); }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+        }
+        /* 卡片设计 */
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            padding: 40px;
+            position: relative;
+            overflow: hidden;
+            transition: 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(255, 255, 255, 0.2);
+            box-shadow: 0 20px 40px -10px rgba(0,0,0,0.5);
+        }
+        /* 给第一个卡片加上大跨度 */
+        .card-large { grid-column: span 2; }
+        
+        .card h3 { font-size: 1.5rem; margin-bottom: 12px; font-weight: 700; }
+        .card p { color: var(--text-sub); font-size: 1rem; line-height: 1.6; }
+        .card-icon {
+            width: 50px; height: 50px; background: rgba(255,255,255,0.05);
+            border-radius: 12px; display: flex; align-items: center; justify-content: center;
+            font-size: 1.5rem; margin-bottom: 24px; border: 1px solid var(--border);
+        }
+
+        /* --- 亮点介绍 --- */
+        .highlight {
+            margin-top: 150px;
+            border-radius: 30px;
+            background: linear-gradient(180deg, #111 0%, #050505 100%);
+            border: 1px solid var(--border);
+            padding: 80px;
+            display: flex; align-items: center; gap: 60px;
+            overflow: hidden; position: relative;
+        }
+        /* 背景光晕装饰 */
+        .highlight::before {
+            content: ''; position: absolute; top: -100px; right: -100px;
+            width: 400px; height: 400px; background: var(--primary-gradient);
+            filter: blur(150px); opacity: 0.15; pointer-events: none;
+        }
+        
+        .highlight-content { flex: 1; z-index: 1; }
+        .highlight-content h2 { font-size: 3rem; line-height: 1.1; margin-bottom: 20px; }
+        .highlight-content p { color: var(--text-sub); font-size: 1.2rem; margin-bottom: 30px; }
+        .highlight-img-box {
+            flex: 1.2; position: relative; z-index: 1;
+            transform: perspective(1000px) rotateY(-10deg) rotateX(5deg);
+            transition: 0.5s;
+        }
+        .highlight:hover .highlight-img-box { transform: perspective(1000px) rotateY(-5deg) rotateX(2deg); }
+        .highlight-img-box img { width: 100%; border-radius: 12px; box-shadow: 0 20px 50px rgba(0,0,0,0.5); border: 1px solid var(--border); }
+
+        /* --- 安装指南 --- */
+        .install { margin: 120px 0; border-top: 1px solid var(--border); padding-top: 80px; }
+        .install-grid { display: grid; grid-template-columns: 1fr 1.5fr; gap: 50px; }
+        .install-info h2 { font-size: 2rem; margin-bottom: 15px; }
+        .install-steps { display: flex; flex-direction: column; gap: 20px; }
+        .step {
+            display: flex; gap: 20px; padding: 20px; background: var(--surface);
+            border-radius: 16px; border: 1px solid var(--border); align-items: center;
+        }
+        .step-num { font-size: 2rem; font-weight: 800; color: #333; line-height: 1; }
+        
+        /* Footer */
+        footer {
+            padding: 60px 0; text-align: center; border-top: 1px solid var(--border);
+            color: var(--text-sub); font-size: 0.9rem;
+        }
+
+        /* 响应式 */
+        @media (max-width: 900px) {
+            .hero h1 { font-size: 3rem; }
+            .grid { grid-template-columns: 1fr; }
+            .card-large { grid-column: span 1; }
+            .highlight { flex-direction: column; padding: 40px; text-align: center; }
+            .highlight-img-box { transform: none !important; margin-top: 40px; }
+            .install-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="ambient-light"></div>
+    <div class="noise-overlay"></div>
+
+    <nav>
+        <div class="container" style="display: flex; width: 100%; justify-content: space-between; align-items: center;">
+            <div class="logo">🔥 <span>AI火光</span>图片压缩</div>
+            <div class="nav-links">
+                <a href="#features">功能</a>
+                <a href="#install">安装</a>
+                <a href="https://github.com/xiansa20/AI-" target="_blank">GitHub</a>
+            </div>
+        </div>
+    </nav>
+
+    <section class="hero">
+        <div class="container">
+            <h1>给图片做减法，<br><span class="gradient-text">给效率做加法。</span></h1>
+            <p>基于 AI 视觉大模型。RAW 无损解码，智能重命名，极速压缩。</p>
+            
+            <div class="btn-group">
+                <a href="https://github.com/xiansa20/AI-/releases/download/v1.2.0/AI.-1.2.0-arm64.dmg" class="btn btn-primary">
+                    <svg width="20" height="20" viewBox="0 0 384 512" fill="currentColor">
+                        <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 52.3-11.4 69.5-34.3z"/>
+                    </svg>
+                    下载 for macOS
+                </a>
+                <a href="https://pan.quark.cn/s/1363ad4eba8f" target="_blank" class="btn btn-glass">
+                    夸克网盘
+                </a>
+            </div>
+
+            <div class="comparison-wrapper" id="compareSection">
+                <img src="app-after.jpg" alt="After" class="img-base" id="baseImg">
+                <div class="img-overlay" id="overlayDiv">
+                    <img src="app-before.jpg" alt="Before" id="overlayImg">
+                    <div class="label label-before">Before：杂乱无序</div>
+                </div>
+                <div class="label label-after"><span class="label-dot" style="background:#4ade80"></span>After：AI 智能整理</div>
+                <div class="slider-handle" id="sliderHandle">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M15 6l-6 6 6 6"/><path d="M9 6l6 6-6 6" transform="translate(10,0)"/></svg>
+                </div>
+            </div>
+            <div class="compare-desc-container">
+                <div class="compare-desc">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12H3m15-5 5 5-5 5M6 17l-5-5 5-5"/></svg>
+                    左右拖动，对比 AI 重命名效果
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <section id="features" class="container">
+        <div class="section-header">
+            <h2>不仅仅是压缩</h2>
+            <p>为摄影师与设计师量身定制的 AI 工作流</p>
+        </div>
+        <div class="grid">
+            <div class="card card-large">
+                <div class="card-icon">🤖</div>
+                <h3>AI 视觉重命名</h3>
+                <p>无论你的照片是 `DSC_001.NEF` 还是 `IMG_999.JPG`，内置的视觉大模型（支持 SiliconFlow, ChatGPT 等）都能看懂照片内容，并将其重命名为 `[风景]落日雪山.jpg`。从此告别文件管理噩梦。</p>
+            </div>
+            <div class="card">
+                <div class="card-icon">📸</div>
+                <h3>原生 RAW 解码</h3>
+                <p>调用 macOS 底层系统引擎，完美呈现 Nikon/Sony/Canon RAW 原片的 6000x4000 全尺寸细节，拒绝模糊缩略图。</p>
+            </div>
+            <div class="card">
+                <div class="card-icon">⚡️</div>
+                <h3>智能参数建议</h3>
+                <p>不知道该压到多少？点击“智能参数”，AI 会分析图片复杂度，为你推荐画质与体积的最佳平衡点。</p>
+            </div>
+            <div class="card">
+                <div class="card-icon">🔐</div>
+                <h3>隐私优先设计</h3>
+                <p>支持自定义 API Key 和 Endpoint。图片数据直连官方接口，不经过任何第三方服务器，保护你的作品安全。</p>
+            </div>
+            <div class="card">
+                <div class="card-icon">🌓</div>
+                <h3>深色模式适配</h3>
+                <p>极简的黑白设计语言，完美适配 macOS 系统外观。专注于内容本身，无干扰的沉浸式体验。</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="container">
+        <div class="highlight">
+            <div class="highlight-content">
+                <h2>自定义 AI 模型<br><span style="color: #666">掌握核心控制权</span></h2>
+                <p>我们内置了主流厂商配置，但你可以自由掌控一切。切换到最新的 GPT-4o，或是使用性价比极高的 DeepSeek 视觉模型？只需填入 Key，即可无缝切换。</p>
+                <div class="compare-desc" style="margin-top: 0">⚙️ 支持 OpenAI / Gemini / 硅基流动 等</div>
+            </div>
+            <div class="highlight-img-box">
+                <img src="ai-settings.png" alt="AI Settings">
+            </div>
+        </div>
+    </section>
+
+    <section id="install" class="container">
+        <div class="install">
+            <div class="install-grid">
+                <div class="install-info">
+                    <h2>⚠️ 安装说明</h2>
+                    <p style="color: #888; margin-bottom: 20px;">由于是独立开发的免费软件，未向 Apple 缴纳签名费，首次打开会提示“无法验证开发者”。</p>
+                    <a href="https://github.com/xiansa20/AI-/releases/download/v1.2.0/AI.-1.2.0-arm64.dmg" class="btn btn-primary" style="display:inline-flex;">下载安装包</a>
+                </div>
+                <div class="install-steps">
+                    <div class="step">
+                        <div class="step-num">1</div>
+                        <div>将软件拖入 <strong>“应用程序”</strong> 文件夹。</div>
+                    </div>
+                    <div class="step">
+                        <div class="step-num">2</div>
+                        <div>对着图标点击 <strong>鼠标右键</strong>（不要直接双击）。</div>
+                    </div>
+                    <div class="step">
+                        <div class="step-num">3</div>
+                        <div>选择菜单里的 <strong>“打开”</strong>，在弹窗中点击确定。</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <div class="container">
+            <p>© 2024 AI火光图片压缩. Built with Electron & React.</p>
+        </div>
+    </footer>
+
+    <script>
+        const wrapper = document.getElementById('compareSection');
+        const handle = document.getElementById('sliderHandle');
+        const overlay = document.getElementById('overlayDiv');
+        const overlayImg = document.getElementById('overlayImg');
+        const baseImg = document.getElementById('baseImg');
+
+        // 核心：保持 overlay 图片宽度始终等于容器宽度
+        function syncImageWidth() {
+            const width = wrapper.offsetWidth;
+            overlayImg.style.width = width + 'px';
+        }
+        window.addEventListener('resize', syncImageWidth);
+        baseImg.onload = syncImageWidth;
+        setTimeout(syncImageWidth, 100);
+
+        // 移动逻辑
+        const move = (clientX) => {
+            const rect = wrapper.getBoundingClientRect();
+            let x = clientX - rect.left;
+            
+            // 限制边界
+            if (x < 0) x = 0;
+            if (x > rect.width) x = rect.width;
+            
+            const percent = (x / rect.width) * 100;
+            
+            overlay.style.width = percent + '%';
+            handle.style.left = percent + '%';
+        }
+
+        // --- 修改点：鼠标移动直接跟随 (无需按住) ---
+        wrapper.addEventListener('mousemove', (e) => {
+            // 只有当鼠标在容器内时才触发
+            move(e.clientX);
+        });
+        
+        // 手机端保持原样 (手指触摸滑动)
+        wrapper.addEventListener('touchmove', (e) => {
+            e.preventDefault(); // 防止滚动页面
+            move(e.touches[0].clientX);
+        }, { passive: false });
+        
+        // 额外的优化：鼠标移入时瞬间跳转到鼠标位置，无需等待移动
+        wrapper.addEventListener('mouseenter', (e) => {
+            move(e.clientX);
+        });
+    </script>
+
+</body>
+</html>
