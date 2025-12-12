@@ -1,11 +1,10 @@
 <div align="center">
-
-  <h1>AI火光图片压缩 (Fire Image Compressor)</h1>
+  <h1>AI火光图片压缩（Fire Image Compressor）</h1>
   <p><strong>AI 驱动的极简主义 Mac 图片处理工具</strong></p>
-  
-  <a href="#download">
-    <img src="[https://img.shields.io/badge/macOS-Download-000000?style=for-the-badge&logo=apple&logoColor=white](https://raw.githubusercontent.com/xiansa20/AI-/refs/heads/main/image.png)">
-  </a>
+  <!-- 修正：把图片链接直接写在src里，去掉Markdown的[...] -->
+  <img src="[https://img.shields.io/badge/macOS-Download-000000?style=for-the-badge&logo=apple&logoColor=white](https://github.com/xiansa20/AI-/blob/main/image.png?raw=true)" alt="macOS下载按钮">
+  <!-- 如果你还想加另一张图片（比如工具截图），可以再加一个img标签： -->
+  <img src="[https://raw.githubusercontent.com/xiansa20/AI-/refs/heads/main/image.png](https://github.com/xiansa20/AI-/blob/main/image.png?raw=true)" alt="AI火光图片压缩工具截图" style="margin-top:10px;">
 </div>
 
 ---
