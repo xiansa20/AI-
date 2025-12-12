@@ -1,10 +1,10 @@
 <div align="center">
-  <img src="https://via.placeholder.com/150?text=AppIcon" width="120" height="120" alt="Logo">
+
   <h1>AI火光图片压缩 (Fire Image Compressor)</h1>
   <p><strong>AI 驱动的极简主义 Mac 图片处理工具</strong></p>
   
   <a href="#download">
-    <img src="https://img.shields.io/badge/macOS-Download-000000?style=for-the-badge&logo=apple&logoColor=white" alt="Download for Mac">
+    <img src="[https://img.shields.io/badge/macOS-Download-000000?style=for-the-badge&logo=apple&logoColor=white](https://raw.githubusercontent.com/xiansa20/AI-/refs/heads/main/image.png)">
   </a>
 </div>
 
